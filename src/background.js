@@ -1,7 +1,8 @@
 'use strict'
 
 require('dotenv').config();
-import { app, protocol, BrowserWindow } from 'electron'
+const fs = require('fs')
+import { app, protocol, BrowserWindow, ipcMain } from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
 const isDevelopment = process.env.NODE_ENV !== 'production'
@@ -29,17 +30,21 @@ async function createWindow() {
   // Create the browser window.
   // Search for a user
   const data = await twitterClient.accountsAndUsers.usersSearch({ q: 'twitterDev' });
-  console.log(data);
+  // console.log(data);
 
 
   const win = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
-      
+      // TODO: セキュアな方法に切り替える 
+        nodeIntegration: true,
+        nodeIntegrationInWorker: true
+    
+    
       // Use pluginOptions.nodeIntegration, leave this alone
       // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-      nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
+      // nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
     }
   })
 
@@ -52,6 +57,12 @@ async function createWindow() {
     // Load the index.html when not in development
     win.loadURL('app://./index.html')
   }
+  console.log("reload!!")
+  console.log( path.join(__dirname,'..', '.src', 'background.js')  )
+  fs.watchFile(path.join(__dirname,'..', '.src', 'background.js') , () => {
+    console.log("reload")
+    win.reload();
+  })
 }
 
 // Quit when all windows are closed.
@@ -98,3 +109,11 @@ if (isDevelopment) {
     })
   }
 }
+
+
+ipcMain.handle("btnExecInvoke_onclick", async (event, arg) => {
+  const data = await twitterClient.tweets.search(arg);
+  
+  console.log(arg)
+  return data;
+});
